@@ -6,6 +6,17 @@ public class TreeNode {
 	private Integer frequencyValue;
 	private Integer charValue;
 
+	public TreeNode (Integer frequencyValue, Integer charValue) {
+		this.frequencyValue = frequencyValue;
+		this.charValue = charValue;
+	}
+
+	public TreeNode (Integer frequencyValue, TreeNode left, TreeNode right) {
+		this.frequencyValue = frequencyValue;
+		this.left = left;
+		this.right = right;
+	}
+
 	public boolean isLeaf() {
 		return left == null && right == null;
 	}
