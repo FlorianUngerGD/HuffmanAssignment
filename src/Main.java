@@ -8,13 +8,49 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 
+import main.FrequencyPair;
+import main.TreeNode;
+
 public class Main {
+
 	public static void main(String[] args) {
-		
+		// **ENCODING**
+		// Read Text File to ASCII
+		List<Integer> asciiCodes = getAscii(loadFileContents("text.txt"));
+
+		// Create Frequency Table of Text File
+		List<FrequencyPair> freqTable = getFrequencyTable(asciiCodes);
+
+		System.out.println("Frequency Table:");
+		for (FrequencyPair pair : freqTable) {
+			System.out.println(pair.getCode() + ": " + pair.getFrequency());
+		}
+
+		TreeNode rootNode;
+		// Create Huffman Code from frequency Table
+		for (FrequencyPair pair : freqTable) {
+
+		}
+
+		// Store Huffman Table in dectab.txt
+
+		// Convert read in file to Bitstring using huffman code
+
+		// Append a 1 and afterwards 0s until the length of the string is divisible by 8
+
+		// Convert this (extended) bit string into a bytearray by combining each 8 subsequent bits to a byte.
+
+		// Store this bytearray in an external file output.dat
+
+		// **DECODING**
+		// Read in Huffman Code table and byte array
+
+		// Convert byte array to bitstring where trailing 1s and 0s get removed
+
+		//  remaining bit string is then to be decoded using the code table and to be stored in an external filedecompress.txt
 	}
 
 	/*
@@ -30,6 +66,27 @@ public class Main {
 	}
 	*/
 
+	public static List<FrequencyPair> getFrequencyTable(List<Integer> asciiCodes) {
+		// AbstractMap.SimpleEntry<Integer, Integer> =
+		List<FrequencyPair> freqTable = new ArrayList<FrequencyPair>();
+
+		for (Integer code : asciiCodes) {
+			List<FrequencyPair> matching = freqTable.stream().filter(entry -> entry.getCode() == code)
+					.collect(Collectors.toList());
+			if (matching.size() == 0) {
+				freqTable.add(new FrequencyPair(code, 1));
+			} else if (matching.size() == 1) {
+				matching.get(0).incrementFrequency();
+			} else {
+				System.out.println("ERROR: Multiple entries for same char in frequency table!");
+			}
+		}
+
+		return freqTable.stream()
+				.sorted((o1, o2) -> o1.getFrequency() < o2.getFrequency() ? -1 : o1.getFrequency() == o2.getFrequency() ? 0 : 1)
+				.collect(Collectors.toList());
+	}
+
 	public static String loadFileContents(String filePath) {
 		// File contents get loaded
 		try {
@@ -41,6 +98,36 @@ public class Main {
 		}
 
 		return null;
+	}
+
+	public static String append10(String bit) {
+		int length = bit.length();
+		int missingBits = length % 8;
+		if (missingBits > 0) {
+			bit = bit + "1";
+			missingBits--;
+		}
+		for (int i = 0; i < missingBits; i++) {
+			bit = bit + "0";
+		}
+		return bit;
+	}
+
+	public static byte[] stringToArray(String bit) {
+		byte[] bval = new BigInteger(bit, 2).toByteArray();
+		return bval;
+
+
+		/*int anzByte = bit.length() / 8;
+		Byte[] byteArray = new Byte[anzByte];
+		for (int i = 0; i < anzByte; i++) {
+			int intermediateI = Integer.valueOf(bit.substring(8*i, 8*i+1),2);
+			Byte intermediateB = new ByteBuffer().putInt(intermediateI).compact();
+			byteArray[i] = null;
+		}
+
+		return null;*/
+
 	}
 
 	public static void saveCodeToFile(String fileName, List<BigInteger> bigInts) {
