@@ -7,15 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.stream.Collectors;
-import java.io.FileOutputStream;
-
-import com.sun.source.tree.Tree;
 
 import main.FrequencyPair;
 import main.HuffmanCode;
@@ -46,9 +42,10 @@ public class Main {
 			nodes.add(new TreeNode(pair.getFrequency(), pair.getCode()));
 		}
 
-		while(nodes.size() > 1) {
-			List<TreeNode> sortedList = nodes.stream().sorted((o1, o2) -> o1.getFrequencyValue() < o2.getFrequencyValue() ? -1 : o1.getFrequencyValue() == o2.getFrequencyValue() ? 0 : 1)
-					.collect(Collectors.toList());
+		while (nodes.size() > 1) {
+			List<TreeNode> sortedList = nodes.stream().sorted((o1, o2) -> o1.getFrequencyValue() < o2.getFrequencyValue() ?
+					-1 :
+					o1.getFrequencyValue() == o2.getFrequencyValue() ? 0 : 1).collect(Collectors.toList());
 			TreeNode left = sortedList.get(0);
 			TreeNode right = sortedList.get(1);
 
@@ -73,8 +70,9 @@ public class Main {
 		// Convert read in file to Bitstring using huffman code
 		String newBitString = "";
 		for (Integer code : asciiCodes) {
-			Optional<HuffmanCode> corresponding = huffmanCodes.stream().filter(huffmanCode -> huffmanCode.getAsciiCode() == code).findFirst();
-			if(corresponding.isPresent()) {
+			Optional<HuffmanCode> corresponding = huffmanCodes.stream().filter(huffmanCode -> huffmanCode.getAsciiCode() == code)
+					.findFirst();
+			if (corresponding.isPresent()) {
 				newBitString += corresponding.get().getHuffmanBits();
 			} else {
 				System.out.println("ERROR: No corresponding Huffman Code found for ascii: " + code);
@@ -87,17 +85,44 @@ public class Main {
 		saveByteArrayToFile("output.dat", stringToByteArray(append10(newBitString)));
 		System.out.println("HuffmanCode saved in output.dat");
 
-
 		// **DECODING**
 		// Read in Huffman Code table and byte array
+		huffmanCodes = readHuffmanCodesFromFile("dec_tab-mada.txt");
+		byte[] inputData = loadByteArrayFromFile("output-mada.dat");
 
 		// Convert byte array to bitstring where trailing 1s and 0s get removed
+		String bitStringToDecode = remove10(byteArrayToString(inputData));
 
 		//  remaining bit string is then to be decoded using the code table and to be stored in an external filedecompress.txt
+		saveFile("filedecompress.txt", decode(bitStringToDecode));
 	}
 
-	public static void getCode(TreeNode root, String bitString)
-	{
+	public static String decode(String bitString) {
+		// create Map with bitcode and corresponding string value
+		HashMap<String, String> huffmanCodesMap = new HashMap<>();
+		for (HuffmanCode code : huffmanCodes) {
+			huffmanCodesMap.put(code.getHuffmanBits(), Character.toString((char)(code.getAsciiCode())));
+		}
+
+		char[] bits = bitString.toCharArray();
+
+		// loop over bitstring and check if bits equal a bitcode
+		StringBuffer buffer = new StringBuffer();
+		StringBuffer currentBitString = new StringBuffer();
+		for (int i = 0; i < bits.length; i++) {
+			currentBitString.append(bits[i]);
+			String stringValue = huffmanCodesMap.get(currentBitString.toString());
+			if (stringValue == null) {
+				continue;
+			}
+			buffer.append(stringValue);
+			currentBitString.setLength(0);
+		}
+
+		return buffer.toString();
+	}
+
+	public static void getCode(TreeNode root, String bitString) {
 		if (root.isLeaf()) {
 			System.out.println(root.getCharValue() + ":" + bitString);
 			huffmanCodes.add(new HuffmanCode(root.getCharValue(), bitString));
@@ -108,18 +133,24 @@ public class Main {
 		getCode(root.getRight(), bitString + "1");
 	}
 
-	/*
-	public static Key readKeyFromFile(String fileName) {
-		// Key gets read from file
+	public static List<HuffmanCode> readHuffmanCodesFromFile(String fileName) {
+		// Decode Table gets read in
 		String text = loadFileContents(fileName);
-		String number1 = text.substring(text.indexOf("(") + 1);
-		number1 = number1.substring(0, number1.indexOf(","));
-		String number2 = text.substring(text.indexOf(",") + 1);
-		number2 = number2.substring(0, number2.indexOf(")"));
+		String[] tableEntries = text.split("-");
 
-		return new Key(new BigInteger(number1), new BigInteger(number2));
+		List<HuffmanCode> codes = new ArrayList<>();
+
+		System.out.println("Reading in ascii-table from file \"" + fileName + "\"");
+		for (String entry : tableEntries) {
+			int ascii = Integer.parseInt(entry.substring(0, entry.indexOf(":")));
+			String code = entry.substring(entry.indexOf(":") + 1);
+
+			codes.add(new HuffmanCode(ascii, code));
+			System.out.println(ascii + "/" + code);
+		}
+
+		return codes;
 	}
-	*/
 
 	public static List<FrequencyPair> getFrequencyTable(List<Integer> asciiCodes) {
 		// AbstractMap.SimpleEntry<Integer, Integer> =
@@ -155,34 +186,56 @@ public class Main {
 		return null;
 	}
 
-	public static String append10(String bit) {
-		int length = bit.length();
-		int missingBits = length % 8;
-		if (missingBits > 0) {
-			bit = bit + "1";
-			missingBits--;
+	public static byte[] loadByteArrayFromFile(String filePath) {
+		// File contents get loaded
+		try {
+			Path path = Paths.get(filePath);
+
+			return Files.readAllBytes(path);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+
+		return null;
+	}
+
+	public static String append10(String bit) {
+		bit = bit + "1";
+		int length = bit.length();
+		int missingBits = (8 - length % 8) % 8;
+
 		for (int i = 0; i < missingBits; i++) {
 			bit = bit + "0";
 		}
 		return bit;
 	}
 
+	public static String remove10(String bit){
+		String result = bit;
+		int count = bit.length()-1;
+		while (count >= 0 && result.charAt(count) == '0'){
+			count--;
+		}
+		if (count >= 0 && result.charAt(count) == '1'){
+			result = result.substring(0, count);
+		}
+		else System.out.println("problem in der remove10 methode");
+		return result;
+	}
+
 	public static byte[] stringToByteArray(String bit) {
 		byte[] bval = new BigInteger(bit, 2).toByteArray();
 		return bval;
+	}
 
+	public static String byteArrayToString(byte[] input) {
+		String result = "";
 
-		/*int anzByte = bit.length() / 8;
-		Byte[] byteArray = new Byte[anzByte];
-		for (int i = 0; i < anzByte; i++) {
-			int intermediateI = Integer.valueOf(bit.substring(8*i, 8*i+1),2);
-			Byte intermediateB = new ByteBuffer().putInt(intermediateI).compact();
-			byteArray[i] = null;
+		for (byte inputByte : input){
+			result += String.format("%8s", Integer.toBinaryString(inputByte & 0xFF)).replace(' ', '0');
 		}
 
-		return null;*/
-
+		return result;
 	}
 
 	public static void saveByteArrayToFile(String fileName, byte[] byteArray) {
@@ -194,12 +247,9 @@ public class Main {
 			}
 			Files.createFile(path);
 			Files.write(path, byteArray);
-		}
-		catch(IOException e){
+		} catch (IOException e) {
 			e.getStackTrace();
 		}
-
-
 
 	}
 
@@ -216,23 +266,6 @@ public class Main {
 		}
 
 		saveFile(fileName, newString);
-	}
-
-	public static List<BigInteger> getBigIntegersFromFile(String filename) {
-		List<BigInteger> newBigInts = new ArrayList();
-
-		try {
-			Scanner scanner = new Scanner(new File(filename));
-			scanner.useDelimiter(",");
-			while (scanner.hasNext()) {
-				newBigInts.add(scanner.nextBigInteger());
-			}
-			scanner.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return newBigInts;
 	}
 
 	public static String saveFile(String fileName, String text) {
