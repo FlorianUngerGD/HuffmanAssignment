@@ -94,7 +94,10 @@ public class Main {
 		String bitStringToDecode = remove10(byteArrayToString(inputData));
 
 		//  remaining bit string is then to be decoded using the code table and to be stored in an external filedecompress.txt
-		saveFile("filedecompress.txt", decode(bitStringToDecode));
+		String decodedString = decode(bitStringToDecode);
+		saveFile("filedecompress.txt", decodedString);
+		System.out.println("Decoded string:");
+		System.out.println(decodedString);
 	}
 
 	public static String decode(String bitString) {
